@@ -55,6 +55,9 @@ jobs:
       - name: Mock Password file
         run: echo test > password.txt
 
+      - name: Mock Cert
+        run: echo test > VpnGateway-RootCert.crt
+
       - name: Verify encoding
         shell: pwsh
         run: ./scripts/Test-Encoding.ps1
