@@ -1,57 +1,104 @@
-# Terraform template
+## Prerequisites
 
-Terraform template for modules and submodules.
-Includes pre-commit hooks that lint the terraform code and generate module's
-documentation as part of README file.
-Contains examples of terraform CI/CD pipelines for GitHub Actions and Azure Pipelines.
+# Azure VPN Infrastructure Overview
 
-## Azure naming conventions
+This Terraform-based Azure infrastructure sets up a VPN-enabled virtual network, virtual machines,
+and a site-to-site connection with an on-premises (DigitalOcean) environment.
 
-- [Define your naming convention](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming)
-- [Azure naming module](https://registry.terraform.io/modules/Azure/naming/azurerm/latest)
+## Overview of Resources
 
-## Terraform Init
+The configuration provisions the following:
 
-- Create and configure Azure Storage Account for Terraform state
-- Create `azure.sas.conf` file with the following content:
-    ```bash
-    storage_account_name = "storage_account_name"
-    container_name       = "container_name"
-    key                  = "terraform.tfstate"
-    sas_token            = "sas_token"
-    ```
-- `terraform init -backend-config="azure.sas.conf" -reconfigure -upgrade`
+- One resource group
+- One virtual network with two subnets
+- One Ubuntu VM
+- One Key Vault for root certificate management
+- One VPN Gateway with a public IP
+- One Local Network Gateway (representing DigitalOcean)
+- One IPsec VPN connection to DigitalOcean
+- Role-based access to Key Vault
 
-## Module referencing
+## Network Configuration
 
-- Bitbucket SSH: `git::git@bitbucket.org:kolosovpetro/terraform.git//modules/storage`
-- Github SSH: `git::git@github.com:kolosovpetro/terraform.git//modules/storage`
-- Github HTTP: `github.com/kolosovpetro/AzureLinuxVMTerraform.git//modules/ubuntu-vm-key-auth-no-pip?ref=master`
+### Virtual Network (VNet)
 
-## Pre-commit configuration
+- Name: vnet-d01
+- Address Space: 10.10.0.0/24
 
-- Install python3 via Windows Store
-- `pip install --upgrade pip`
-- `pip install pre-commit`
-- Update PATH variable
-- `pre-commit install`
+### Subnets
 
-### Install terraform docs
+1. **VM Subnet**
+    - Name: snet-vm-d01
+    - CIDR: 10.10.0.0/26
 
-- `choco install terraform-docs`
+2. **Gateway Subnet**
+    - Name: GatewaySubnet
+    - CIDR: 10.10.0.64/26
 
-### Install tflint
+### VPN Client Address Pool
 
-- `choco install tflint`
+- CIDR: 172.17.0.0/24
 
-### Documentation
+## Virtual Machine
 
-- https://github.com/antonbabenko/pre-commit-terraform
-- https://github.com/kolosovpetro/AzureTerraformBackend
-- https://github.com/terraform-docs/terraform-docs
-- https://terraform-docs.io/user-guide/installation/
-- https://pre-commit.com/
+- Name: vm1-d01
+- Size: Standard_B2ms
+- Username: razumovsky_r
+- SSH Public Key Authentication via `${path.root}/id_rsa.pub`
+- Public IP attached: pip-vm1-d01
+- Network Interface: nic-vm1-d01
+- OS Disk Name: osdisk-vm1-d01
+- Located in: snet-vm-d01
 
-## Deploy storage account for terraform state
+## Key Vault
 
-- See [CreateAzureStorageAccount.ps1](./CreateAzureStorageAccount.ps1)
+- Name: kv-vpn-d01
+- SKU: Standard
+- Soft Delete: Enabled (7 days)
+- RBAC Authorization: Enabled
+- Purge Protection: Disabled
+- Root Certificate Secret:
+    - Name: VpnGateway-RootCert
+    - Path: ${path.root}/VpnGateway-RootCert.crt (base64 encoded)
+
+### Role Assignments for Key Vault
+
+- CLI User (current Terraform identity)
+- Azure Portal user with ID: 89ab0b10-1214-4c8f-878c-18c3544bb547
+
+## VPN Gateway
+
+- Name: vpn-gw-d01
+- Type: RouteBased
+- SKU: VpnGw2AZ
+- Active/Active: Disabled
+- BGP: Disabled
+- Public IP: pip-vpn-gw-d01
+- Located in: GatewaySubnet (10.10.0.64/26)
+- Zones: 1, 2, 3
+- VPN Client Configuration:
+    - Address Pool: 172.17.0.0/24
+    - Root Certificate:
+        - Name: VPNROOT
+        - Pulled from Key Vault secret: VpnGateway-RootCert
+
+## Local Network Gateway (DigitalOcean)
+
+- Name: lgwy-do-d01
+- Public IP: 64.226.118.158
+- On-Prem Network Address Space: 10.114.0.0/20
+
+## VPN Connection
+
+- Name: onpremise
+- Type: IPsec
+- Shared Key: 4-v3ry-53cr37-1p53c-5h4r3d-k3y
+- Connects:
+    - Azure Virtual Network Gateway: vpn-gw-d01
+    - Local Network Gateway: lgwy-do-d01
+
+
+## Modules
+
+- https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/virtual_network_gateway
+- https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/local_network_gateway
