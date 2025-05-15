@@ -1,9 +1,21 @@
-## Prerequisites
-
-# Azure VPN Infrastructure Overview
+## Site-to-Site VPN Azure and Digital ocean
 
 This Terraform-based Azure infrastructure sets up a VPN-enabled virtual network, virtual machines,
 and a site-to-site connection with an on-premises (DigitalOcean) environment.
+
+## Steps to configure
+
+- Provision terraform infrastructure
+- Install StrongSwan (or Openswan) to digital ocean droplet
+- Configure IPsec /etc/ipsec.conf
+- Edit /etc/ipsec.secrets
+- Enable IP Forwarding
+- Restart StrongSwan
+
+## Docs
+
+- https://learn.microsoft.com/en-us/azure/vpn-gateway/tutorial-site-to-site-portal
+- https://medium.com/@sasmigrg93/using-openswan-for-site-to-site-vpn-2a17ff0d1c83
 
 ## Overview of Resources
 
@@ -97,6 +109,11 @@ The configuration provisions the following:
     - Azure Virtual Network Gateway: vpn-gw-d01
     - Local Network Gateway: lgwy-do-d01
 
+
+## Screenshots
+
+![terminal1](images/WindowsTerminal_9QrJpgaE4i.png)
+![terminal2](images/pwsh_frOB3dD18M.png)
 
 ## Modules
 
