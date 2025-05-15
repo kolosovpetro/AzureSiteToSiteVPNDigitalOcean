@@ -67,6 +67,23 @@ module "vm1" {
   public_ip_name              = "pip-vm1-${var.prefix}"
 }
 
+module "vm2" {
+  source                      = "github.com/kolosovpetro/AzureLinuxVMTerraform.git//modules/ubuntu-vm-key-auth?ref=master"
+  resource_group_name         = azurerm_resource_group.public.name
+  resource_group_location     = azurerm_resource_group.public.location
+  subnet_id                   = azurerm_subnet.vm.id
+  ip_configuration_name       = "ipc-vm2-${var.prefix}"
+  network_interface_name      = "nic-vm2-${var.prefix}"
+  os_profile_computer_name    = "vm2-${var.prefix}"
+  storage_os_disk_name        = "osdisk-vm2-${var.prefix}"
+  vm_name                     = "vm2-${var.prefix}"
+  os_profile_admin_public_key = file("${path.root}/id_rsa.pub")
+  os_profile_admin_username   = "razumovsky_r"
+  network_security_group_id   = azurerm_network_security_group.public.id
+  vm_size                     = "Standard_B2ms"
+  public_ip_name              = "pip-vm2-${var.prefix}"
+}
+
 ##########################################################################
 # KEYVAULT
 ##########################################################################
@@ -175,7 +192,7 @@ resource "azurerm_local_network_gateway" "do" {
   name                = "lgwy-do-${var.prefix}"
   resource_group_name = azurerm_resource_group.public.name
   location            = azurerm_resource_group.public.location
-  gateway_address     = "64.226.118.158"   # public ip address DO droplet
+  gateway_address     = "64.226.118.158"  # public ip address DO droplet
   address_space       = ["10.114.0.0/20"] # address range of the DO network
 }
 
